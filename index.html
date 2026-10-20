@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Nhập Thẻ Thiên Phúc</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --bg2: var(--tg-theme-secondary-bg-color, #f2f3f5);
+    --text: var(--tg-theme-text-color, #1c1c1e);
+    --hint: var(--tg-theme-hint-color, #8a8a8e);
+    --accent: var(--tg-theme-button-color, #2e7d32);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --danger: var(--tg-theme-destructive-text-color, #d32f2f);
+    --line: color-mix(in srgb, var(--hint) 30%, transparent);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg2); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 12px 12px 96px; }
+  h1 { font-size: 20px; margin: 4px 4px 12px; }
+  h1 small { display: block; font-size: 13px; font-weight: 400; color: var(--hint); margin-top: 2px; }
+  .card { background: var(--bg); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  label.f { display: block; font-size: 13px; color: var(--hint); margin: 10px 0 4px; }
+  label.f b { color: var(--danger); font-weight: 400; }
+  input[type=text], input[type=tel], textarea {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 64px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .seg { display: flex; gap: 8px; }
+  .seg label { flex: 1; text-align: center; padding: 10px 6px; border: 1px solid var(--line);
+    border-radius: 10px; cursor: pointer; user-select: none; }
+  .seg input { display: none; }
+  .seg input:checked + span { font-weight: 600; }
+  .seg label:has(input:checked) { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .link { background: none; border: 0; color: var(--accent); font: inherit; font-size: 13px; padding: 2px 0; cursor: pointer; }
+  .remove { color: var(--danger); }
+  .err { color: var(--danger); font-size: 13px; margin-top: 4px; min-height: 0; }
+  .err:empty { display: none; }
+  input.bad, textarea.bad { border-color: var(--danger); }
+  .add { width: 100%; padding: 12px; border: 1.5px dashed var(--accent); border-radius: 12px;
+    background: transparent; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+  .notg { background: #fff3cd; color: #6b5200; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; }
+  #fallbackSend { display: none; width: 100%; margin-top: 12px; padding: 14px; border: 0; border-radius: 12px;
+    background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🍀 Nhập Thẻ Thiên Phúc<small>Điền thông tin rồi bấm nút <b>Gửi</b> ở dưới. Bot sẽ cho bạn kiểm tra lại trước khi lưu.</small></h1>
+  <div id="notg" class="notg" hidden>Trang này cần mở từ nút <b>📝 Mở form nhập thẻ</b> trong bot Telegram.</div>
+
+  <section class="card">
+    <h2>👤 Người mua</h2>
+    <label class="f" for="buyer">Họ tên người mua <b>*</b></label>
+    <input id="buyer" type="text" autocomplete="name" maxlength="100" placeholder="VD: Nguyễn Thị Thúy">
+    <div class="err" id="buyer-err"></div>
+    <label class="f" for="phone">Số điện thoại liên hệ <b>*</b></label>
+    <input id="phone" type="tel" inputmode="tel" maxlength="16" placeholder="VD: 0914930759">
+    <div class="err" id="phone-err"></div>
+  </section>
+
+  <div id="cards"></div>
+  <button class="add" id="addCard" type="button">➕ Thêm thẻ cho cùng người mua</button>
+  <button id="fallbackSend" type="button">Gửi</button>
+</main>
+
+<template id="cardTpl">
+  <section class="card" data-card>
+    <h2><span data-title>🎴 Thẻ 1</span><button type="button" class="link remove" data-remove>Xóa thẻ</button></h2>
+    <label class="f">Tên in trên thẻ <b>*</b></label>
+    <input type="text" data-k="name" maxlength="100" placeholder="Người có tên trên thẻ">
+    <button type="button" class="link" data-same>👤 Giống người mua</button>
+    <div class="err" data-err="name"></div>
+
+    <label class="f">Ngày tháng năm sinh (kèm giờ sinh nếu có) <b>*</b></label>
+    <input type="text" data-k="birth" maxlength="150" placeholder="VD: 20/11/1982 6h sáng">
+    <div class="seg" style="margin-top:8px">
+      <label><input type="radio" data-k="cal" value="DL"><span>☀️ Dương lịch</span></label>
+      <label><input type="radio" data-k="cal" value="AL"><span>🌙 Âm lịch</span></label>
+    </div>
+    <div class="err" data-err="birth"></div>
+
+    <label class="f">Giới tính <b>*</b></label>
+    <div class="seg">
+      <label><input type="radio" data-k="gender" value="Nam"><span>👨 Nam</span></label>
+      <label><input type="radio" data-k="gender" value="Nữ"><span>👩 Nữ</span></label>
+    </div>
+    <div class="err" data-err="gender"></div>
+
+    <label class="f">Địa chỉ làm lễ in trên thẻ <b>*</b></label>
+    <textarea data-k="addr" maxlength="300" placeholder="Số nhà, đường, phường/xã, tỉnh/thành"></textarea>
+    <button type="button" class="link" data-copyaddr hidden>📋 Giống địa chỉ thẻ trước</button>
+    <div class="err" data-err="addr"></div>
+
+    <label class="check"><input type="checkbox" data-k="dragon"><span>🐉 Thẻ Rồng</span></label>
+  </section>
+</template>
+
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTelegram = Boolean(tg && tg.initData !== undefined && tg.platform && tg.platform !== 'unknown');
+  const MAX_CARDS = 5;
+  const $ = (s, el = document) => el.querySelector(s);
+  const cardsEl = $('#cards');
+  let seq = 0;
+
+  if (tg) { tg.ready(); tg.expand(); }
+  if (!inTelegram) $('#notg').hidden = false;
+
+  // ------------------------------------------------------------ thẻ
+  function addCard() {
+    const n = cardsEl.children.length;
+    if (n >= MAX_CARDS) return;
+    const node = $('#cardTpl').content.firstElementChild.cloneNode(true);
+    seq += 1;
+    node.querySelectorAll('input[type=radio]').forEach((r) => { r.name = `${r.dataset.k}-${seq}`; });
+    node.querySelector('[data-same]').onclick = () => { node.querySelector('[data-k=name]').value = $('#buyer').value.trim(); };
+    node.querySelector('[data-remove]').onclick = () => { node.remove(); renumber(); };
+    node.querySelector('[data-copyaddr]').onclick = () => {
+      const cards = [...cardsEl.children];
+      const prev = cards[cards.indexOf(node) - 1];
+      if (prev) node.querySelector('[data-k=addr]').value = prev.querySelector('[data-k=addr]').value;
+    };
+    cardsEl.appendChild(node);
+    renumber();
+    if (n > 0) node.querySelector('[data-k=name]').focus();
+  }
+  function renumber() {
+    const cards = [...cardsEl.children];
+    cards.forEach((c, i) => {
+      c.querySelector('[data-title]').textContent = `🎴 Thẻ ${i + 1}`;
+      c.querySelector('[data-remove]').hidden = cards.length === 1;
+      c.querySelector('[data-copyaddr]').hidden = i === 0;
+    });
+    $('#addCard').hidden = cards.length >= MAX_CARDS;
+    updateButton();
+  }
+  $('#addCard').onclick = addCard;
+
+  // ------------------------------------------------------------ kiểm tra
+  const hasLetter = (s) => /\p{L}/u.test(s);
+  const dateRe = /(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{4}|\d{2})(?!\d)/;
+  function setErr(el, errEl, msg) {
+    errEl.textContent = msg || '';
+    if (el) el.classList.toggle('bad', Boolean(msg));
+    return !msg;
+  }
+  function checkName(v, label) {
+    if (v.length < 2) return `Nhập ${label}`;
+    if (!hasLetter(v)) return `${label} phải có chữ cái`;
+    return '';
+  }
+  function checkPhone(v) {
+    let d = v.replace(/[\s.\-()]/g, '');
+    if (d.startsWith('+84')) d = '0' + d.slice(3);
+    return /^0\d{9,10}$/.test(d) ? '' : 'SĐT 10–11 số, bắt đầu bằng 0';
+  }
+  function checkBirth(v) {
+    const m = v.match(dateRe);
+    if (!m) return 'Cần có ngày/tháng/năm, VD 20/11/1982';
+    const d = +m[1]; const mo = +m[2];
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return 'Ngày hoặc tháng không hợp lệ';
+    return '';
+  }
+
+  function collect(showErrors) {
+    let ok = true;
+    const buyer = $('#buyer').value.replace(/\s+/g, ' ').trim();
+    const phone = $('#phone').value.trim();
+    const chk = (el, errEl, msg) => { if (showErrors) setErr(el, errEl, msg); if (msg) ok = false; };
+    chk($('#buyer'), $('#buyer-err'), checkName(buyer, 'tên người mua'));
+    chk($('#phone'), $('#phone-err'), checkPhone(phone));
+    const cards = [...cardsEl.children].map((c) => {
+      const get = (k) => c.querySelector(`[data-k=${k}]`);
+      const radio = (k) => (c.querySelector(`[data-k=${k}]:checked`) || {}).value || '';
+      const err = (k) => c.querySelector(`[data-err=${k}]`);
+      const card = {
+        t: get('name').value.replace(/\s+/g, ' ').trim(),
+        b: get('birth').value.replace(/\s+/g, ' ').trim(),
+        l: radio('cal'),
+        g: radio('gender'),
+        a: get('addr').value.replace(/\s+/g, ' ').trim(),
+        r: get('dragon').checked ? 1 : 0,
+      };
+      chk(get('name'), err('name'), checkName(card.t, 'tên trên thẻ'));
+      chk(get('birth'), err('birth'), checkBirth(card.b) || (card.l ? '' : 'Chọn Dương lịch hoặc Âm lịch'));
+      chk(null, err('gender'), card.g ? '' : 'Chọn giới tính');
+      chk(get('addr'), err('addr'), card.a.length < 8 ? 'Ghi đầy đủ địa chỉ (số nhà, đường, phường/xã, tỉnh)' : '');
+      return card;
+    });
+    return { ok, payload: { v: 1, p: 'TP', m: buyer, s: phone, c: cards } };
+  }
+
+  // ------------------------------------------------------------ gửi
+  function updateButton() {
+    const n = cardsEl.children.length;
+    const text = `GỬI ${n} THẺ ĐỂ KIỂM TRA`;
+    if (inTelegram) {
+      tg.MainButton.setParams({ text, is_visible: true, is_active: true });
+    } else {
+      $('#fallbackSend').textContent = text;
+      $('#fallbackSend').style.display = 'block';
+    }
+  }
+  function submit() {
+    const { ok, payload } = collect(true);
+    if (!ok) {
+      const firstErr = document.querySelector('.err:not(:empty)');
+      if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+      return;
+    }
+    const data = JSON.stringify(payload);
+    if (new TextEncoder().encode(data).length > 4000) {
+      const msg = 'Dữ liệu quá dài. Hãy gửi bớt thẻ (tối đa khoảng 3–4 thẻ có địa chỉ dài mỗi lần).';
+      if (tg && tg.showAlert) tg.showAlert(msg); else alert(msg);
+      return;
+    }
+    if (!inTelegram) { alert('Hãy mở trang này từ nút trong bot Telegram để gửi.'); return; }
+    tg.sendData(data); // Telegram tự đóng form và gửi dữ liệu cho bot
+  }
+  if (inTelegram) tg.MainButton.onClick(submit);
+  $('#fallbackSend').onclick = submit;
+
+  addCard();
+})();
+</script>
+</body>
+</html>
